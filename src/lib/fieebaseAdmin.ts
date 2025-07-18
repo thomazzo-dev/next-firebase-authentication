@@ -1,8 +1,11 @@
 import admin from "firebase-admin";
-import serviceAccount from "../../serviceAccountKey.json";
-
-// 실제 배포 환경에서 어떻게 설정할까 생각해봐야함!!!
-
+ 
+if (!admin.apps.length) {
 admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount as admin.ServiceAccount)
-});
+  credential: admin.credential.cert({
+    projectId: process.env.FIREBASE_PROJECT_ID,
+    clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+    privateKey: (process.env.FIREBASE_PRIVATE_KEY ?? "").replace(/\\n/g, '\n') ,
+  }),
+})
+}
