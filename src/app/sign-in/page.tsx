@@ -1,3 +1,5 @@
+"use client";
+
 import SocialLogin from "@/components/social-login";
 import GithubIcon from "@/components/svg-icons/github-icons";
 import GoogleIcon from "@/components/svg-icons/google-icons";
