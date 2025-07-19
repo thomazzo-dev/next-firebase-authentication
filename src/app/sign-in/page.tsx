@@ -5,8 +5,13 @@ import GithubIcon from "@/components/svg-icons/github-icons";
 import GoogleIcon from "@/components/svg-icons/google-icons";
 import Link from "next/link";
 import React from "react";
+import useAuth from "@/hooks/useAuth";
+import { GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
 
 export default function SignInPage() {
+   const { socialLogin } = useAuth();
+    const githubProvider = new GithubAuthProvider();
+    const googleAuthProvider = new GoogleAuthProvider();
   return (
     <section className="flex flex-col justify-center items-center flex-grow-0 flex-shrink-0 w-[496px] relative gap-12 p-12 rounded-2xl bg-white">
       <header className="flex flex-col justify-center items-center flex-grow-0 flex-shrink-0 h-[50px] w-[120px] relative gap-2 p-2">
@@ -19,7 +24,7 @@ export default function SignInPage() {
           className="flex-grow-0 flex-shrink-0 w-[84px] h-7 relative"
           preserveAspectRatio="none"
         >
-          <g clip-path="url(#clip0_2_614)">
+          <g clipPath="url(#clip0_2_614)">
             <mask
               id="mask0_2_614"
               style={{ maskType: "alpha" }}
@@ -143,11 +148,15 @@ export default function SignInPage() {
             <SocialLogin
               providerIcon={<GithubIcon />}
               buttonText={"sign in with github"}
+              authAction={() => socialLogin(githubProvider)}
+
             />
             <SocialLogin
               providerIcon={<GoogleIcon />}
               buttonText={"sign in with google"}
-            />
+              authAction={() => socialLogin(googleAuthProvider)}
+
+/>
           </section>
         </div>
       </div>

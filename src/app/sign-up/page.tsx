@@ -5,9 +5,15 @@ import SocialLogin from "@/components/social-login";
 import GithubIcon from "@/components/svg-icons/github-icons";
 import GoogleIcon from "@/components/svg-icons/google-icons";
 import Link from "next/link";
+import { GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
+
 import { useFormState } from "react-dom";
+import useAuth from "@/hooks/useAuth";
 
 export default function SignUpPage() {
+  const { socialLogin } = useAuth();
+  const githubProvider = new GithubAuthProvider();
+  const googleAuthProvider = new GoogleAuthProvider();
   return (
     <section className="w-[496px] p-12 bg-white rounded-2xl inline-flex flex-col justify-center items-center gap-12">
       <header className="flex flex-col justify-center items-center flex-grow-0 flex-shrink-0 h-[50px] w-[120px] relative gap-2 p-2">
@@ -118,14 +124,14 @@ export default function SignUpPage() {
           </defs>
         </svg>
       </header>
-      <p className="self-stretch flex flex-col justify-start items-start gap-6">
+      <section className="self-stretch flex flex-col justify-start items-start gap-6">
         <p className="self-stretch justify-start text-stone-950 text-2xl font-medium font-['Inter'] leading-loose">
           Register
         </p>
         <p className="self-stretch justify-start text-zinc-800 text-base font-normal font-['Inter'] leading-normal">
           Get started today.
         </p>
-      </p>
+      </section>
       {/* Input Fields */}
       <form className="self-stretch flex flex-col justify-center items-center gap-4">
         <Input
@@ -185,10 +191,12 @@ export default function SignUpPage() {
         <SocialLogin
           providerIcon={<GithubIcon />}
           buttonText={"continue with github"}
+          authAction={() => socialLogin(githubProvider)}
         />
         <SocialLogin
           providerIcon={<GoogleIcon />}
           buttonText={"continue with google"}
+          authAction={() => socialLogin(googleAuthProvider)}
         />
       </div>
       <Link href="/sign-in">

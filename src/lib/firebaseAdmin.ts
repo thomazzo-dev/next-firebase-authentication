@@ -9,3 +9,7 @@ admin.initializeApp({
   }),
 })
 }
+
+const auth = admin.auth();
+
+export { auth };
