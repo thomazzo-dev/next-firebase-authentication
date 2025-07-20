@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/firebaseAdmin";
+import { DecodedIdToken } from "firebase-admin/auth";
+import {prisma} from '@/lib/db'; 
 
-// Helper function to parse request body safely
+ // Helper function to parse request body safely
 async function parseRequestBody(request: Request) {
   try {
     const body = await request.json();
@@ -28,6 +30,35 @@ async function verifyAuthToken(idToken: string) {
     return { error: "Invalid or expired ID token", status: 401 };
   }
 }
+
+// Helper function to syncronize user information with prisma
+async function syncUserWithPrisma(uid: string, email: string, decodedToken: DecodedIdToken) {
+  let user = await prisma.user.findUnique({
+    where: { firebaseUid: uid },
+  });
+
+  // If user does not exist, create a new user
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        firebaseUid: decodedToken.uid,
+        email: decodedToken.email || email, 
+        name: decodedToken.name || null,
+      },
+    });
+    console.log('New user created in DB:', user.email);
+  } else {  
+  // If user already exist
+    if (user.email !== decodedToken.email) {
+      user = await prisma.user.update({
+        where: { firebaseUid: decodedToken.uid },
+        data: { email: decodedToken.email },
+      });
+      console.log('User email updated in DB:', user.email);
+    }
+  }
+}
+
 
 export async function POST(request: Request) {
   // Assuming this is within a POST handler
@@ -58,7 +89,6 @@ export async function POST(request: Request) {
     } = bodyParseResult;
 
     // Verify the ID token
-
     const tokenResult = await verifyAuthToken(idToken);
 
     if (tokenResult.error) {
@@ -83,8 +113,9 @@ export async function POST(request: Request) {
     }
 
     console.log("User authenticated successfully:", decodedToken.uid);
+    // If all checks pass, return a success response and Synchronize user information with Prisma
+    await syncUserWithPrisma(firebaseUid, email, decodedToken);
 
-    // If all checks pass, return a success response
     return NextResponse.json(
       {
         message: "Authentication successful",
@@ -92,6 +123,7 @@ export async function POST(request: Request) {
       },
       { status: 200 }
     );
+    
   } catch (error) {
     console.error("Error during sign-in process:", error);
     // Be more specific with error messages if possible
