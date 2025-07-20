@@ -1,64 +1,109 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@/lib/firebaseAdmin';
+import { NextResponse } from "next/server";
+import { auth } from "@/lib/firebaseAdmin";
 
-export async function POST(request: Request) { // Assuming this is within a POST handler
+// Helper function to parse request body safely
+async function parseRequestBody(request: Request) {
   try {
-    const authorizationHeader = request.headers.get('Authorization');
+    const body = await request.json();
+    if (!body.email || !body.firebaseUid) {
+      return {
+        error: "Missing email or firebaseUid in request body",
+        status: 400,
+      };
+    }
+    return { data: body };
+  } catch (jsonError) {
+    console.error("Failed to parse request body:", jsonError);
+    return { error: "Invalid request body format", status: 400 };
+  }
+}
+
+// Helper function to verify ID token safely
+async function verifyAuthToken(idToken: string) {
+  try {
+    const decodedToken = await auth.verifyIdToken(idToken);
+    return { data: decodedToken };
+  } catch (tokenError) {
+    console.error("ID Token verification failed:", tokenError);
+    return { error: "Invalid or expired ID token", status: 401 };
+  }
+}
+
+export async function POST(request: Request) {
+  // Assuming this is within a POST handler
+  try {
+    const authorizationHeader = request.headers.get("Authorization");
 
     // Check if the authorization header is present and starts with 'Bearer'
-    if (!authorizationHeader || !authorizationHeader.startsWith('Bearer ')) {
-      return NextResponse.json({ message: 'No ID token provided' }, { status: 401 });
+    if (!authorizationHeader || !authorizationHeader.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { message: "No ID token provided" },
+        { status: 401 }
+      );
     }
 
-    const idToken = authorizationHeader.split('Bearer ')[1];
+    const idToken = authorizationHeader.split("Bearer ")[1];
 
-    let email: string;
-    let firebaseUid: string;
+    // Parse the request body to get email and firebaseUid
+    const bodyParseResult = await parseRequestBody(request);
 
-    try {
-      // Assuming the request body contains a JSON object with email and firebaseUid
-      const body = await request.json();
-      email = body.email;
-      firebaseUid = body.firebaseUid;
-
-      // Basic validation for presence (optional but good practice)
-      if (!email || !firebaseUid) {
-        return NextResponse.json({ message: 'Missing email or firebaseUid in request body' }, { status: 400 });
-      }
-
-    } catch (jsonError) {
-      console.error('Failed to parse request body or missing fields:', jsonError);
-      return NextResponse.json({ message: 'Invalid request body' }, { status: 400 });
+    if (bodyParseResult.error) {
+      return NextResponse.json(
+        { message: bodyParseResult.error },
+        { status: bodyParseResult.status }
+      );
     }
+    const {
+      data: { email, firebaseUid },
+    } = bodyParseResult;
 
     // Verify the ID token
-    let decodedToken;
-    try {
-      decodedToken = await auth.verifyIdToken(idToken);
-    } catch (tokenError) {
-      console.error('ID Token verification failed:', tokenError);
-      return NextResponse.json({ message: 'Invalid or expired ID token' }, { status: 401 });
+
+    const tokenResult = await verifyAuthToken(idToken);
+
+    if (tokenResult.error) {
+      return NextResponse.json(
+        { message: tokenResult.error },
+        { status: tokenResult.status }
+      );
+    }
+    const { data: decodedToken } = tokenResult;
+
+    // Ensure decodedToken is defined
+    if (!decodedToken) {
+      return NextResponse.json(
+        { message: "Invalid token data" },
+        { status: 400 }
+      );
     }
 
     // Check for UID mismatch
     if (decodedToken.uid !== firebaseUid) {
-      return NextResponse.json({ message: 'UID mismatch' }, { status: 401 });
+      return NextResponse.json({ message: "UID mismatch" }, { status: 401 });
     }
 
-    console.log('User authenticated successfully:', decodedToken.uid);
+    console.log("User authenticated successfully:", decodedToken.uid);
 
     // If all checks pass, return a success response
     return NextResponse.json(
-      { message: 'Authentication successful', user: { uid: decodedToken.uid, email: decodedToken.email } },
+      {
+        message: "Authentication successful",
+        user: { uid: decodedToken.uid, email: decodedToken.email },
+      },
       { status: 200 }
     );
-
-  } catch (error: any) {
-    console.error('Error during sign-in process:', error);
+  } catch (error) {
+    console.error("Error during sign-in process:", error);
     // Be more specific with error messages if possible
-    if (error instanceof SyntaxError && error.message.includes('JSON')) {
-       return NextResponse.json({ message: 'Invalid JSON body' }, { status: 400 });
+    if (error instanceof SyntaxError && error.message.includes("JSON")) {
+      return NextResponse.json(
+        { message: "Invalid JSON body" },
+        { status: 400 }
+      );
     }
-    return NextResponse.json({ message: error.message || 'Internal server error' }, { status: 500 });
+    return NextResponse.json(
+      { message: (error instanceof Error ? error.message : "Internal server error") },
+      { status: 500 }
+    );
   }
 }
