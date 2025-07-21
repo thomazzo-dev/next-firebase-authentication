@@ -26,7 +26,7 @@ import { useRouter } from "next/navigation";
 
 export default function useAuth() {
   
-    const router = useRouter();
+  const router = useRouter();
 
   const signUpWithEmailPw = async (
     email: string,

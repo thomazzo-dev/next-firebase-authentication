@@ -1,7 +1,9 @@
-import React from 'react'
+import React from "react";
 
-export default function submit-button() {
+export default function SubmitButton() {
   return (
-    <div>submit-button</div>
-  )
+    <button className="btn w-full bg-black text-white font-medium rounded-lg px-4 py-2 hover:bg-gray-800 transition-colors" type="submit">
+      Create your account
+    </button>
+  );
 }

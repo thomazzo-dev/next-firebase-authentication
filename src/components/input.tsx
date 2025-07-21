@@ -2,26 +2,24 @@ import { InputHTMLAttributes } from "react";
 
 interface InputProps {
   name: string;
-  errors?: string[];
+  errorMessage?: string;
 }
 
 export default function Input({
   name,
-  errors = [],
+  errorMessage,
   ...rest
 }: InputProps & InputHTMLAttributes<HTMLInputElement>) {
   return (
     <div className="flex flex-col gap-2 w-full">
       <input
         name={name}
-        className="bg-transparent px-2 rounded-md w-full h-10 focus:outline-none ring-2 focus:ring-4 transition ring-neutral-200 focus:ring-orange-500 border-none placeholder:text-neutral-400"
+        className="  px-2 rounded-md w-full h-10  input"
         {...rest}
       />
-      {errors.map((error, index) => (
-        <span key={index} className="text-red-500 font-medium">
-          {error}
-        </span>
-      ))}
+      {errorMessage && (
+        <p className="mt-1 text-sm text-red-600">{errorMessage}</p>
+      )}
     </div>
   );
 }
