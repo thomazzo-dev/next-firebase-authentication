@@ -1,6 +1,6 @@
 "use client";
 
-import { useForm, SubmitHandler } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import Input from "@/components/input";
 import SocialLogin from "@/components/social-login";
 import GithubIcon from "@/components/svg-icons/github-icons";
@@ -13,7 +13,6 @@ import HeadingIcon from "@/components/svg-icons/heading-icon";
 
 type FormInput = {
   email: string;
-  username: string;
   password: string;
   checkPassword: string;
 };
@@ -31,13 +30,12 @@ export default function SignUpPage() {
 
   const password = watch("password", ""); // Default value is empty string
 
-  const onSubmit = () =>
-    signUpWithEmailPw(watch("email"), watch("password"), watch("username"));
+  const onSubmit = () => signUpWithEmailPw(watch("email"), watch("password"));
 
   return (
     <section className="w-[496px] p-12 bg-white rounded-2xl inline-flex flex-col justify-center items-center gap-12">
       <header className="flex flex-col justify-center items-center flex-grow-0 flex-shrink-0 h-[50px] w-[120px] relative gap-2 p-2">
-        <HeadingIcon/>
+        <HeadingIcon />
       </header>
       <section className="self-stretch flex flex-col justify-start items-start gap-6">
         <p className="self-stretch justify-start text-stone-950 text-2xl font-medium font-['Inter'] leading-loose">
@@ -52,14 +50,6 @@ export default function SignUpPage() {
         className="self-stretch flex flex-col justify-center items-center gap-4"
         onSubmit={handleSubmit(onSubmit)}
       >
-        <Input
-          id="username"
-          type="name"
-          placeholder="Enter your username"
-          {...register("username", { required: true })}
-          errorMessage={errors.username?.message}
-        />
-
         <Input
           id="email"
           type="email"

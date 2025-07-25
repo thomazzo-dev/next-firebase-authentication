@@ -30,8 +30,8 @@ async function verifyAuthToken(idToken: string) {
   }
 }
 
-// Helper function to syncronize user information with prisma
-async function syncUserWithPrisma(
+// sync user with Prisma for Oauth authentication
+async function syncUser(
   uid: string,
   email: string,
   decodedToken: DecodedIdToken
@@ -62,4 +62,54 @@ async function syncUserWithPrisma(
   }
 }
 
-export { parseRequestBody, verifyAuthToken, syncUserWithPrisma };
+async function checkUserExists(uid: string) {
+  const user = await prisma.user.findUnique({
+    where: { firebaseUid: uid },
+  });
+  if(user) {
+    console.log("User already exists in DB:", user.email);
+    return true;
+  } else {
+    return false;
+  }
+  
+}
+
+async function createUser(
+  uid: string,
+  email: string,
+  decodedToken: DecodedIdToken
+) {
+  let user = await prisma.user.findUnique({
+    where: { firebaseUid: uid },
+  });
+  user = await prisma.user.create({
+    data: {
+      firebaseUid: decodedToken.uid,
+      email: decodedToken.email || email,
+      name: decodedToken.name || null,
+    },
+  });
+
+  console.log("New user created in DB:", user.email);
+}
+
+async function deleteUser(uid: string) {
+  try {
+    await prisma.user.delete({
+      where: { firebaseUid: uid },
+    });
+    console.log("User deleted successfully");
+  } catch (error) {
+    console.error("Error deleting user:", error);
+  }
+}
+
+export {
+  parseRequestBody,
+  verifyAuthToken,
+  checkUserExists,
+  createUser,
+  deleteUser,
+  syncUser
+};

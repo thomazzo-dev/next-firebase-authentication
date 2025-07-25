@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { parseRequestBody, verifyAuthToken } from "@/lib/authHelpers";
+import { parseRequestBody, verifyAuthToken, syncUser } from "@/lib/authHelpers";
 
 export async function POST(request: Request) {
   // Assuming this is within a POST handler
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       );
     }
     const {
-      data: { firebaseUid },
+      data: { email, firebaseUid },
     } = bodyParseResult;
 
     // Verify the ID token
@@ -53,8 +53,10 @@ export async function POST(request: Request) {
       return NextResponse.json({ message: "UID mismatch" }, { status: 401 });
     }
 
-    console.log("User authenticated successfully:", decodedToken.uid);
     // If all checks pass, return a success response and Synchronize user information with Prisma
+    await syncUser(firebaseUid, email, decodedToken);
+
+    console.log("User authenticated successfully:", decodedToken.uid);
 
     return NextResponse.json(
       {
@@ -63,7 +65,6 @@ export async function POST(request: Request) {
       },
       { status: 200 }
     );
-    
   } catch (error) {
     console.error("Error during sign-in process:", error);
     // Be more specific with error messages if possible
@@ -74,7 +75,10 @@ export async function POST(request: Request) {
       );
     }
     return NextResponse.json(
-      { message: (error instanceof Error ? error.message : "Internal server error") },
+      {
+        message:
+          error instanceof Error ? error.message : "Internal server error",
+      },
       { status: 500 }
     );
   }

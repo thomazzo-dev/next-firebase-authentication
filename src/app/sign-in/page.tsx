@@ -1,4 +1,5 @@
 "use client";
+import { useForm } from "react-hook-form";
 
 import SocialLogin from "@/components/social-login";
 import GithubIcon from "@/components/svg-icons/github-icons";
@@ -10,10 +11,26 @@ import { GoogleAuthProvider, GithubAuthProvider } from "firebase/auth";
 import Input from "@/components/input";
 import HeadingIcon from "@/components/svg-icons/heading-icon";
 
+type FormInput = {
+  email: string;
+  password: string;
+};
+
 export default function SignInPage() {
-  const { socialLogin } = useAuth();
+  const { socialLogin, signInWithEmailPw } = useAuth();
   const githubProvider = new GithubAuthProvider();
   const googleAuthProvider = new GoogleAuthProvider();
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    formState: { errors },
+  } = useForm<FormInput>();
+
+  const password = watch("password", ""); // Default value is empty string
+
+  const onSubmit = () => signInWithEmailPw(watch("email"), watch("password"));
 
   return (
     <section className="flex flex-col justify-center items-center flex-grow-0 flex-shrink-0 w-[496px] relative gap-12 p-12 rounded-2xl bg-white">
@@ -30,22 +47,38 @@ export default function SignInPage() {
           </p>
         </section>
       </header>
-      <form className="flex flex-col justify-center items-center self-stretch flex-grow-0 flex-shrink-0 gap-6">
-        <Input name="email" type="email" placeholder="Email" required />
+      <form
+        className="flex flex-col justify-center items-center self-stretch flex-grow-0 flex-shrink-0 gap-6"
+        onSubmit={handleSubmit(onSubmit)}
+      >
         <Input
-          name="password"
+          id="email"
+          type="email"
+          placeholder="m@example.com"
+          {...register("email", { required: true })}
+          errorMessage={errors.email?.message}
+        />
+        <Input
+          id="password"
           type="password"
-          placeholder="Password"
-          minLength={4}
-          required
+          {...register("password", {
+            required: true,
+            minLength: {
+              value: 8,
+              message: "Password must be at least 8 characters",
+            },
+          })}
+          errorMessage={errors.password?.message}
+          placeholder="Enter your password"
         />
 
         <div className="flex flex-col justify-start items-center self-stretch flex-grow-0 flex-shrink-0 relative gap-4">
-          <div className="flex justify-center items-center self-stretch flex-grow-0 flex-shrink-0 relative gap-2.5 px-4 py-3 rounded-lg bg-black">
-            <p className="flex-grow-0 flex-shrink-0 text-base font-medium text-center text-white">
-              Get started
-            </p>
-          </div>
+          <button
+            className="btn w-full bg-black text-white font-medium rounded-lg px-4 py-2 hover:bg-gray-800 transition-colors capitalize"
+            type="submit"
+          >
+            sign in
+          </button>
           <p className="flex-grow-0 flex-shrink-0 text-base text-left text-[#636363]">
             Or
           </p>
