@@ -1,65 +1,35 @@
 import { NextResponse } from "next/server";
-import { parseRequestBody, verifyAuthToken } from "@/lib/authHelpers";
+import { verifyAuthRequest } from "@/lib/authHelpers";
 
 export async function POST(request: Request) {
   // Assuming this is within a POST handler
   try {
-    const authorizationHeader = request.headers.get("Authorization");
-
-    // Check if the authorization header is present and starts with 'Bearer'
-    if (!authorizationHeader || !authorizationHeader.startsWith("Bearer ")) {
+    // 1. Verify the authentication request
+    const authResult = await verifyAuthRequest(request);
+ 
+    // type guard for authResult ???
+    if ("response" in authResult && authResult.response) {
+      return authResult.response;
+    }
+ 
+    if (!("decodedToken" in authResult)) {
       return NextResponse.json(
-        { message: "No ID token provided" },
+        { message: "Decoded token is missing in authResult" },
         { status: 401 }
       );
     }
-
-    const idToken = authorizationHeader.split("Bearer ")[1];
-
-    // Parse the request body to get email and firebaseUid
-    const bodyParseResult = await parseRequestBody(request);
-
-    if (bodyParseResult.error) {
-      return NextResponse.json(
-        { message: bodyParseResult.error },
-        { status: bodyParseResult.status }
-      );
-    }
-    const {
-      data: { firebaseUid },
-    } = bodyParseResult;
-
-    // Verify the ID token
-    const tokenResult = await verifyAuthToken(idToken);
-
-    if (tokenResult.error) {
-      return NextResponse.json(
-        { message: tokenResult.error },
-        { status: tokenResult.status }
-      );
-    }
-    const { data: decodedToken } = tokenResult;
-
-    // Ensure decodedToken is defined
-    if (!decodedToken) {
-      return NextResponse.json(
-        { message: "Invalid token data" },
-        { status: 400 }
-      );
-    }
-
-    // Check for UID mismatch
-    if (decodedToken.uid !== firebaseUid) {
-      return NextResponse.json({ message: "UID mismatch" }, { status: 401 });
-    }
-
+ 
+    const { decodedToken } = authResult;
+    const { email, uid } = decodedToken;
+ 
+    
     console.log("User authenticated successfully:", decodedToken.uid);
     // If all checks pass, return a success response and Synchronize user information with Prisma
 
     return NextResponse.json(
       {
         message: "Authentication successful",
-        user: { uid: decodedToken.uid, email: decodedToken.email },
+        user: { uid, email: email },
       },
       { status: 200 }
     );
