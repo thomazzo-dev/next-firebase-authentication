@@ -1,31 +1,10 @@
 import { NextResponse } from "next/server";
 import { verifyAuthRequest, syncUser } from "@/lib/authHelpers";
 
-export async function POST(request: Request) {
-  // Assuming this is within a POST handler
+export const POST = verifyAuthRequest(async (_, decodedToken) => {
   try {
-    // 1. Verify the authentication request
-    const authResult = await verifyAuthRequest(request);
-
-    // type guard for authResult ???
-    if ("response" in authResult && authResult.response) {
-      return authResult.response;
-    }
-
-    if (!("decodedToken" in authResult)) {
-      return NextResponse.json(
-        { message: "Decoded token is missing in authResult" },
-        { status: 401 }
-      );
-    }
-
-    const { decodedToken } = authResult;
     const { email, uid } = decodedToken;
-
-    // If all checks pass, return a success response and Synchronize user information with Prisma
     await syncUser(uid, decodedToken, email);
-
-    console.log("User authenticated successfully:", decodedToken.uid);
 
     return NextResponse.json(
       {
@@ -51,4 +30,4 @@ export async function POST(request: Request) {
       { status: 500 }
     );
   }
-}
+}); 

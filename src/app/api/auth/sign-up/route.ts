@@ -13,8 +13,8 @@ export async function POST (
     // 1. Verify the authentication request
     const authResult = await verifyAuthRequest(request);
  
-    // type guard for authResult ???
-    if ("response" in authResult && authResult.response) {
+    // Type guard to check if authResult contains a 'response' property
+    if ("response" in authResult && authResult.response !== null && authResult.response !== undefined) {
       return authResult.response;
     }
 

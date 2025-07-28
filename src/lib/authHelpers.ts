@@ -1,8 +1,12 @@
 import { auth } from "@/lib/firebaseAdmin";
 import { DecodedIdToken } from "firebase-admin/auth";
-import { NextResponse } from "next/server";
-
+import { NextResponse, NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+
+type AuthenticatedHandler<DecodedIdToken> = (
+  request: NextRequest,
+  decodedToken: DecodedIdToken
+) => Promise<NextResponse>;
 
 // Helper function to parse request body safely
 async function parseRequestBody(request: Request) {
@@ -32,77 +36,61 @@ async function verifyAuthToken(idToken: string) {
   }
 }
 
-async function verifyAuthRequest(request: Request) {
-  const authorizationHeader = request.headers.get("Authorization");
+// HOF to verify authentication request
+function verifyAuthRequest(handler: AuthenticatedHandler<DecodedIdToken>) {
+  return async (request: NextRequest) => {
+    const authorizationHeader = request.headers.get("Authorization");
 
-  // Check if the authorization header is present and starts with 'Bearer'
-  if (!authorizationHeader || !authorizationHeader.startsWith("Bearer ")) {
-    return {
-      response: NextResponse.json(
+    // Check if the authorization header is present and starts with 'Bearer'
+    if (!authorizationHeader || !authorizationHeader.startsWith("Bearer ")) {
+      return NextResponse.json(
         { message: "No ID token provided" },
         { status: 401 }
-      ),
-    };
-  }
+      );
+    }
+    const idToken = authorizationHeader.split("Bearer ")[1];
 
-  const idToken = authorizationHeader.split("Bearer ")[1];
+    // 2. parse the request body and verify the ID token by promise all
+    const [bodyParseResult, tokenResult] = await Promise.all([
+      parseRequestBody(request.clone()),
+      verifyAuthToken(idToken),
+    ]);
 
-  // 2. parse the request body
-  /*
-  request.json() can only be called once, you must clone the request object 
-  before parsing it in the HOF so the original handler can still access the body.
-  */
-  const bodyParseResult = await parseRequestBody(request.clone());
-
-  if (bodyParseResult.error) {
-    return {
-      response: NextResponse.json(
+    // 3. error handling for body parsing
+    if (bodyParseResult.error) {
+      return NextResponse.json(
         { message: bodyParseResult.error },
         { status: bodyParseResult.status }
-      ),
-    };
-  }
-  const {
-    data: { firebaseUid },
-  } = bodyParseResult;
+      );
+    }
+    const {
+      data: { firebaseUid },
+    } = bodyParseResult;
 
-  // Verify the ID token
-  const tokenResult = await verifyAuthToken(idToken);
-  if (tokenResult.error) {
-    return {
-      response: NextResponse.json(
+    // 4. error handling for token verification
+    if (tokenResult.error) {
+      return NextResponse.json(
         { message: tokenResult.error },
         { status: tokenResult.status }
-      ),
-    };
-  }
-  const { data: decodedToken } = tokenResult;
+      );
+    }
+    const { data: decodedToken } = tokenResult;
 
-  // 4.  Ensure decodedToken is defined 
-  
-  if (!decodedToken) {
-    return NextResponse.json(
-      { message: "Invalid token data" },
-      { status: 400 }
-    );
-  }
+    // 5. verify decodedToken is defined and has the expected structure
+    if (!decodedToken || decodedToken.uid !== firebaseUid) {
+      return NextResponse.json({ message: "UID mismatch" }, { status: 401 });
+    }
 
-  // 5. Check for UID mismatch
-  if (decodedToken.uid !== firebaseUid) {
-    return {
-      response: NextResponse.json({ message: "UID mismatch" }, { status: 401 }),
-    };
-  }
-
-  // if all check is passed return decodedToken
-  return { decodedToken };
+    // 6. if all check is passed, call the handler with decodedToken
+    return handler(request, decodedToken as DecodedIdToken);
+  };
 }
 
 // sync user with Prisma for Oauth authentication
 async function syncUser(
   uid: string,
   decodedToken: DecodedIdToken,
-  email?: string,
+  email?: string
 ) {
   let user = await prisma.user.findUnique({
     where: { firebaseUid: uid },
@@ -113,7 +101,7 @@ async function syncUser(
     user = await prisma.user.create({
       data: {
         firebaseUid: decodedToken.uid,
-        email:`${email ? decodedToken.email : email}`,
+        email: `${email ? decodedToken.email : email}`,
         name: decodedToken.name || null,
       },
     });
