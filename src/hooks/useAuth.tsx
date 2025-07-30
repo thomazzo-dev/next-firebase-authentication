@@ -12,7 +12,7 @@ import {
 import { auth } from "@/lib/firebase";
 import { useRouter } from "next/navigation";
 import { shortId } from "@/lib/usernameGenerator";
-
+import { useUser } from "@/components/user-provider";
 /**
  
   signInWithEmailAndPassword
@@ -27,16 +27,22 @@ import { shortId } from "@/lib/usernameGenerator";
 export default function useAuth() {
   const router = useRouter();
 
+  const { setIsLoading } = useUser();
+
   const signUpWithEmailPw = async (email: string, password: string) => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-     
+      const userCredential = await createUserWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
       await updateProfile(userCredential.user, {
         displayName: `user_${shortId}`,
       });
 
       const idToken = await userCredential.user.getIdToken();
-      
+
       const response = await fetch("/api/auth/sign-up", {
         method: "POST",
         headers: {
@@ -68,9 +74,13 @@ export default function useAuth() {
 
   const signInWithEmailPw = async (email: string, password: string) => {
     try {
-      const userCredential =  await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const idToken = await userCredential.user.getIdToken();
-      
+
       const response = await fetch("/api/auth/sign-in", {
         method: "POST",
         headers: {
@@ -98,7 +108,6 @@ export default function useAuth() {
         alert(`가입중 중 오류 발생: ${error.message}`);
       }
     }
-
   };
 
   const socialLogin = async (provider: AuthProvider) => {
@@ -140,15 +149,34 @@ export default function useAuth() {
   };
 
   const handleSignOut = async () => {
+    setIsLoading(true);
     try {
       await signOut(auth);
-      //navigate("/auth/signin")
+      const response = await fetch("/api/auth/sign-out", {
+        method: "POST",
+      });
+      if (response.ok) {
+        const data = await response.json();
+        console.log("Sign-out successful:", data);
+        router.push("/sign-in"); // redirect to sign-in page after sign-out
+      } else {
+        const errorData = await response.json();
+        console.error("Server sign-out error:", errorData.message);
+        alert(`sign out failed: ${errorData.message}`);
+      }
     } catch (e) {
       if (e instanceof FirebaseError) {
         console.log(e.message);
       }
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  return { handleSignOut, socialLogin, signUpWithEmailPw, signInWithEmailPw };
+  return {
+    handleSignOut,
+    socialLogin,
+    signUpWithEmailPw,
+    signInWithEmailPw,
+   };
 }

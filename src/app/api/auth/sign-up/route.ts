@@ -1,34 +1,12 @@
+import { verifyAuthRequest } from "@/services/authService";
+import { checkUserExists, createUser } from "@/services/userService";
 import { NextResponse } from "next/server";
-import {
-  verifyAuthRequest,
-  createUser,
-  checkUserExists,
-} from "@/lib/authHelpers";
- 
 
-export async function POST (
-  request: Request,
- ) {
+
+export const POST = verifyAuthRequest(async (_, decodedToken) => {
   try {
-    // 1. Verify the authentication request
-    const authResult = await verifyAuthRequest(request);
- 
-    // Type guard to check if authResult contains a 'response' property
-    if ("response" in authResult && authResult.response !== null && authResult.response !== undefined) {
-      return authResult.response;
-    }
-
-    if (!("decodedToken" in authResult)) {
-      return NextResponse.json(
-        { message: "Decoded token is missing in authResult" },
-        { status: 401 }
-      );
-    }
-
-    const { decodedToken } = authResult;
     const { email, uid } = decodedToken;
 
-    
     // If user already exists, throw an error
     const userExists = await checkUserExists(decodedToken.uid);
     if (!userExists) {
@@ -38,6 +16,10 @@ export async function POST (
       console.log("User already exists:", decodedToken.uid);
       alert("User already exists");
     }
+    return NextResponse.json({
+      message: "User created successfully",
+      status: 201,
+    });
   } catch (error) {
     console.error("Error during sign-in process:", error);
     // Be more specific with error messages if possible
@@ -55,4 +37,4 @@ export async function POST (
       { status: 500 }
     );
   }
-}
+});

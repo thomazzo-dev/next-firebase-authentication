@@ -28,8 +28,7 @@ export default function SignInPage() {
     formState: { errors },
   } = useForm<FormInput>();
 
-  const password = watch("password", ""); // Default value is empty string
-
+ 
   const onSubmit = () => signInWithEmailPw(watch("email"), watch("password"));
 
   return (
@@ -43,7 +42,7 @@ export default function SignInPage() {
             Hey friend! Welcome back
           </p>
           <p className="self-stretch flex-grow-0 flex-shrink-0 w-[400px] text-base text-left text-[#2b2b2b]">
-            Enter your email and we'll send a sign in code.
+            Enter your email and we&apos;ll send a sign in code.
           </p>
         </section>
       </header>

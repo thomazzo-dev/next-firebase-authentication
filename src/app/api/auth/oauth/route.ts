@@ -1,11 +1,12 @@
+import { createSessionCookie, verifyAuthRequest } from "@/services/authService";
+import { syncUser } from "@/services/userService";
 import { NextResponse } from "next/server";
-import { verifyAuthRequest, syncUser } from "@/lib/authHelpers";
-
+ 
 export const POST = verifyAuthRequest(async (_, decodedToken) => {
   try {
     const { email, uid } = decodedToken;
     await syncUser(uid, decodedToken, email);
-
+    await createSessionCookie(decodedToken);
     return NextResponse.json(
       {
         message: "Authentication successful",
@@ -30,4 +31,4 @@ export const POST = verifyAuthRequest(async (_, decodedToken) => {
       { status: 500 }
     );
   }
-}); 
+});
